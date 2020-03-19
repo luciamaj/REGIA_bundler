@@ -8,6 +8,6 @@ data = {
     "layout" => "totem",
 }
 
-open('http://192.168.0.124/swi/service/rest/v1/app-totem') { |content| data["data"] = JSON.parse(content.read) }
+open('http://localhost/swi/service/rest/v1/app-totem') { |content| data["data"] = JSON.parse(content.read) }
 
 puts JSON.pretty_generate(data)
