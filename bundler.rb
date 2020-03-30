@@ -27,8 +27,7 @@ def publish(connettore)
     jsonData = `#{$dir}/connettori/#{connettore}`;
     data = JSON.parse(jsonData);
     
-    name = connettore
-    # name = data["name"];
+    name = data["name"];
 
     layout = data["layout"];
     dataString = <<-Q
@@ -95,7 +94,8 @@ export default
     end
     
     puts "Versioni:"
-    puts log(connettore)
+    puts log(name)
+    puts 
 
 end
 
