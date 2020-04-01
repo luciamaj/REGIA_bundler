@@ -8,9 +8,11 @@ require 'fileutils'
 $dir = File.dirname(File.realpath(__FILE__))
 
 connettori = Dir["#{$dir}/connettori/*"].map { |p| File.basename(p) }
+topicsJSON = JSON.parse(File.read('topics/topics.json'));
+topics = topicsJSON.keys;
 
-def versioni(connettore)
-    Dir.chdir("pacchetti/#{connettore}") do
+def versioni(topic)
+    Dir.chdir("pacchetti/#{topic}") do
         versioni = `git log master --pretty=format:"%h" | cut -d " " -f 1`.split("\n")
         return versioni
     end
@@ -92,7 +94,6 @@ export default
     
     Dir.chdir("pacchetti/#{topic}/#{name}") do
         status = `git status 2>&1`
-        puts status
         if status.include? "working tree clean"
             puts "Niente di nuovo da pubblicare"
             exit
@@ -111,9 +112,10 @@ if ARGV.length == 0
     puts <<-Q
 Comandi
 #{$0} pubblica <connettore>
-#{$0} versioni <connettore>
-#{$0} versione_corrente <connettore>
-#{$0} resetta <connettore> <versione>
+#{$0} versioni <topic>
+#{$0} versione_corrente <topic>
+#{$0} resetta <topic> <versione>
+#{$0} topics
 #{$0} connettori
     Q
 elsif ARGV[0] == 'pubblica'
@@ -125,61 +127,64 @@ elsif ARGV[0] == 'pubblica'
 
     publish(connettore)
 elsif ARGV[0] == 'versione_corrente'
-    connettore = ARGV[1]
-    if !connettori.include?(connettore)
-        puts "Non trovo il connettore '#{connettore}'"
-        puts "#{$0} versione_corrente <connettore>"
+    topic = ARGV[1]
+    if !topics.include?(topic)
+        puts "Non trovo il topic '#{topic}'"
+        puts "#{$0} versione_corrente <topic>"
         exit
     end
 
-    Dir.chdir("pacchetti/#{connettore}") do
+    Dir.chdir("pacchetti/#{topic}") do
         versione = `git log -1 --pretty=format:"%h"`
         puts versione
     end
 
 
 elsif ARGV[0] == 'resetta'
-    connettore = ARGV[1]
-    if !connettori.include?(connettore)
-        puts "Non trovo il connettore '#{connettore}'"
-        puts "#{$0} resetta <connettore> <versione>"
+    topic = ARGV[1]
+    if !topics.include?(topic)
+        puts "Non trovo il topic '#{topic}'"
+        puts "#{$0} resetta <topic> <versione>"
         exit
     end
 
     versione = ARGV[2]
     if !versione
-        puts "#{$0} resetta <connettore> <versione>"
-        puts "Non trovo la versione '#{versione}'"
+        puts "#{$0} resetta <topic> <versione>"
+        puts "Non trovo la versione '#{topic}'"
         puts ""
         puts "Versioni disponibili:"
-        puts versioni(connettore)
+        puts versioni(topic)
         exit
     end
 
-    versioni = versioni(connettore)
+    versioni = versioni(topic)
     selezionata = versioni.detect { |v| v.include?(versione) }
     if !selezionata
-        puts "#{$0} resetta <connettore> <versione>"
+        puts "#{$0} resetta <topic> <versione>"
         puts "Non trovo la versione '#{versione}'"
         puts ""
         puts "Versioni disponibili:"
-        puts versioni(connettore)
+        puts versioni(topic)
         exit
     end
         
     puts "Resetto a #{selezionata}"
-    Dir.chdir("pacchetti/#{connettore}") do
+    Dir.chdir("pacchetti/#{topic}") do
         `git checkout #{selezionata} 2>&1`
     end
 
 elsif ARGV[0] == 'versioni'
-    connettore = ARGV[1]
-    if !connettori.include?(connettore)
-        puts "#{$0} versioni <connettore>"
+    topic = ARGV[1]
+    if !topics.include?(topic)
+        puts "#{$0} versioni <topic>"
         exit
     end
 
-    puts log(connettore)
+    puts log(topic)
+
+elsif ARGV[0] == 'topics'
+    topics.each { |t| puts t }
 
 elsif ARGV[0] == 'connettori'
     connettori.each { |c| puts c }
