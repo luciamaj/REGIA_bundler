@@ -4,9 +4,9 @@ require 'json'
 require 'open-uri'
 
 data = {
-    "name" => "totem_lib",
-    "layout" => "totem",
-    "topic" => "totem"
+    "name" => "weclome_lib",
+    "layout" => "welcome",
+    "topic" => "welcome"
 }
 
 # data: {

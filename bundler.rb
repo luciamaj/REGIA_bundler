@@ -29,6 +29,7 @@ def publish(connettore)
     
     name = connettore
     # name = data["name"];
+    topic = data["topic"];
 
     layout = data["layout"];
     dataString = <<-Q
@@ -38,11 +39,13 @@ export default
 
     # TODO: Spostare in def init(connettore)
     Dir.mkdir("pacchetti") unless File.exists?("pacchetti")
-    Dir.mkdir("pacchetti/#{name}") unless File.exists?("pacchetti/#{name}")
-    Dir.mkdir("pacchetti/#{name}/layout") unless File.exists?("pacchetti/#{name}/layout")
-    Dir.mkdir("pacchetti/#{name}/assets") unless File.exists?("pacchetti/#{name}/assets")
+    Dir.mkdir("pacchetti/#{topic}") unless File.exists?("pacchetti/#{topic}")
+    Dir.mkdir("pacchetti/#{topic}/#{name}") unless File.exists?("pacchetti/#{topic}/#{name}")
+    Dir.mkdir("pacchetti/#{topic}/#{name}/layout") unless File.exists?("pacchetti/#{topic}/#{name}/layout")
+    Dir.mkdir("pacchetti/#{topic}/#{name}/assets") unless File.exists?("pacchetti/#{topic}/#{name}/assets")
 
-    Dir.chdir("pacchetti/#{name}") do
+    // TODO il git è sul topic o sulla applicazione??
+    Dir.chdir("pacchetti/#{topic}/#{name}") do
         status = `git status 2>&1`
         if status.include? "ot a git repository"
             puts "Creando repo di git"
@@ -63,7 +66,8 @@ export default
     files = jsonData.scan(filesRegex).map { |m| m[0] }
     puts "Asset da caricare"
     files.each { |f|
-        path = "assets/#{f}"
+        puts "Il file #{f}";
+        path = "assets/#{f}";
         # puts path;
         if File.file?(path)
             puts "\u2713 #{path}"
@@ -98,6 +102,8 @@ export default
     puts log(connettore)
 
 end
+
+// TODO tutto da cambiare se il git sta sul topic
 
 if ARGV.length == 0
     puts <<-Q
