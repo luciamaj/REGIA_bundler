@@ -16,8 +16,8 @@ def versioni(connettore)
     end
 end
 
-def log(connettore)
-    Dir.chdir("pacchetti/#{connettore}") do
+def log(topic, connettore)
+    Dir.chdir("pacchetti/#{topic}/#{connettore}") do
         log = `git log master --pretty=format:"%h"`
         return log
     end
@@ -28,6 +28,7 @@ def publish(connettore)
     data = JSON.parse(jsonData);
     
     name = connettore
+    topic = data["topic"];
     # name = data["name"];
 
     layout = data["layout"];
@@ -37,12 +38,18 @@ export default
     Q
 
     # TODO: Spostare in def init(connettore)
+    # crea la cartella pacchetti (se non esiste *)
     Dir.mkdir("pacchetti") unless File.exists?("pacchetti")
-    Dir.mkdir("pacchetti/#{name}") unless File.exists?("pacchetti/#{name}")
-    Dir.mkdir("pacchetti/#{name}/layout") unless File.exists?("pacchetti/#{name}/layout")
-    Dir.mkdir("pacchetti/#{name}/assets") unless File.exists?("pacchetti/#{name}/assets")
+    # crea la cartella per i topic
+    Dir.mkdir("pacchetti/#{topic}") unless File.exists?("pacchetti/#{topic}")
+    # crea la cartella per l'app
+    Dir.mkdir("pacchetti/#{topic}/#{name}") unless File.exists?("pacchetti/#{topic}/#{name}")
+    # crea la cartella per il layout
+    Dir.mkdir("pacchetti/#{topic}/#{name}/layout") unless File.exists?("pacchetti/#{topic}/#{name}/layout")
+    # crea la cartella per gli assets
+    Dir.mkdir("pacchetti/#{topic}/#{name}/assets") unless File.exists?("pacchetti/#{topic}/#{name}/assets")
 
-    Dir.chdir("pacchetti/#{name}") do
+    Dir.chdir("pacchetti/#{topic}/#{name}") do
         status = `git status 2>&1`
         if status.include? "ot a git repository"
             puts "Creando repo di git"
@@ -57,8 +64,8 @@ export default
         end
     end
 
-    FileUtils.cp_r("layouts/#{layout}/.", "pacchetti/#{name}/layout")
-    File.write("pacchetti/#{name}/data.js", dataString);
+    FileUtils.cp_r("layouts/#{layout}/.", "pacchetti/#{topic}/#{name}/layout")
+    File.write("pacchetti/#{topic}/#{name}/data.js", dataString);
     filesRegex = /\"([^\"]+\.[^\"]+)\"/
     files = jsonData.scan(filesRegex).map { |m| m[0] }
     puts "Asset da caricare"
@@ -67,24 +74,25 @@ export default
         # puts path;
         if File.file?(path)
             puts "\u2713 #{path}"
-            FileUtils.ln_sf(File.realpath(path), "pacchetti/#{name}/assets")
+            FileUtils.ln_sf(File.realpath(path), "pacchetti/#{topic}/#{name}/assets")
         else
             puts "\u2717 #{path}"
         end
     }
     puts ""
 
-    filesInFolder = Dir["#{$dir}/pacchetti/#{name}/assets/*"].map { |p| File.basename(p) }
+    filesInFolder = Dir["#{$dir}/pacchetti/#{topic}/#{name}/assets/*"].map { |p| File.basename(p) }
     filesInFolder.each { |f| 
-        path = "#{$dir}/pacchetti/#{name}/assets/#{f}"
+        path = "#{$dir}/pacchetti/#{topic}/#{name}/assets/#{f}"
         if !files.include?(f) 
             # puts "Removing #{path}"
             FileUtils.rm(path)
         end
     }
     
-    Dir.chdir("pacchetti/#{name}") do
+    Dir.chdir("pacchetti/#{topic}/#{name}") do
         status = `git status 2>&1`
+        puts status
         if status.include? "working tree clean"
             puts "Niente di nuovo da pubblicare"
             exit
@@ -95,7 +103,7 @@ export default
     end
     
     puts "Versioni:"
-    puts log(connettore)
+    puts log(topic, connettore)
 
 end
 

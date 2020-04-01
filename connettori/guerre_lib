@@ -6,6 +6,7 @@ require 'open-uri'
 data = {
     "name" => "guerre_lib",
     "layout" => "guerre",
+    "topic" => "welcome"
 }
 
 
