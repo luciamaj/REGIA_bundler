@@ -18,8 +18,8 @@ def versioni(topic)
     end
 end
 
-def log(topic, connettore)
-    Dir.chdir("pacchetti/#{topic}/#{connettore}") do
+def log(topic)
+    Dir.chdir("pacchetti/#{topic}") do
         log = `git log master --pretty=format:"%h"`
         return log
     end
@@ -104,7 +104,7 @@ export default
     end
     
     puts "Versioni:"
-    puts log(topic, connettore)
+    puts log(topic)
 
 end
 
