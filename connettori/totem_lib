@@ -6,7 +6,6 @@ require 'open-uri'
 data = {
     "name" => "totem_lib",
     "layout" => "totem",
-    "topic" => "totem"
 }
 
 # data: {
