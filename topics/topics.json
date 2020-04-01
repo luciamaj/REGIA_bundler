@@ -1,4 +1,4 @@
 {
     "docufilm": ["totem_lib"],
-    "welcome": ["guerre_lib"]
+    "welcome": ["guerre_lib", "welcome_lib"]
 }

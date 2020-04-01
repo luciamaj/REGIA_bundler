@@ -7,9 +7,21 @@ require 'fileutils'
 
 $dir = File.dirname(File.realpath(__FILE__))
 
-connettori = Dir["#{$dir}/connettori/*"].map { |p| File.basename(p) }
+@connettori = Dir["#{$dir}/connettori/*"].map { |p| File.basename(p, File.extname(p)) }
 topicsJSON = JSON.parse(File.read('topics/topics.json'));
 topics = topicsJSON.keys;
+appsAPI = [];
+
+topicsJSON.values.each { |v|
+    v.each { |a|
+        appsAPI << a;
+    }
+}
+
+
+def isConnettore(connettore)
+    @connettori.include?(connettore);
+end
 
 def versioni(topic)
     Dir.chdir("pacchetti/#{topic}") do
@@ -26,7 +38,7 @@ def log(topic)
 end
 
 def publish(connettore)
-    jsonData = `#{$dir}/connettori/#{connettore}`;
+    jsonData = `#{$dir}/connettori/#{connettore}.rb`;
     data = JSON.parse(jsonData);
     
     name = connettore
@@ -120,7 +132,7 @@ Comandi
     Q
 elsif ARGV[0] == 'pubblica'
     connettore = ARGV[1]
-    if !connettori.include?(connettore)
+    if !@connettori.include?(connettore)
         puts "#{$0} pubblica <connettore>"
         exit
     end
@@ -187,7 +199,13 @@ elsif ARGV[0] == 'topics'
     topics.each { |t| puts t }
 
 elsif ARGV[0] == 'connettori'
-    connettori.each { |c| puts c }
+    appsAPI.each { |c| 
+        if isConnettore(c)
+            puts c 
+        else 
+            puts "il connettore per " + c + " non esiste ancora"
+        end
+    }
 end
 
 exit
