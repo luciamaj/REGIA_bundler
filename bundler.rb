@@ -1,23 +1,35 @@
 #!/usr/bin/env ruby
+Encoding.default_external = Encoding::UTF_8
 
 require 'json'
 require 'fileutils'
 
 # TODO: Il bundler funziona solo se lanciato dalla directory in cui e' l'eseguibile
+# TODO: Fare push in http
 
 $dir = File.dirname(File.realpath(__FILE__))
 
 @connettori = Dir["#{$dir}/connettori/*"].map { |p| File.basename(p, File.extname(p)) }
-topicsJSON = JSON.parse(File.read('topics/topics.json'));
-topics = topicsJSON.keys;
+
+jsonData = `#{$dir}/topics/topics.rb`;
+topicsJSON = JSON.parse(jsonData);
+topicArray = topicsJSON["data"]["result"];
+topics = [];
 appsAPI = [];
 
-topicsJSON.values.each { |v|
-    v.each { |a|
-        appsAPI << a;
+for topic in topicArray do
+    topics.push(topic.keys);
+end   
+
+topicArray.each { |t|
+    t.values.each { |k|
+        k.each { |el|
+            appsAPI << el;
+        }
     }
 }
 
+# puts "APPSAPI", appsAPI[0]
 
 def isConnettore(connettore)
     @connettori.include?(connettore);
@@ -41,13 +53,11 @@ def publish(connettore)
     jsonData = `#{$dir}/connettori/#{connettore}.rb`;
     data = JSON.parse(jsonData);
     
-    name = connettore
     topic = data["topic"];
-    # name = data["name"];
-
-    layout = data["layout"];
+    type = data["type"];
+    layout = connettore;
     dataString = <<-Q
-export default
+let data = 
 #{jsonData}
     Q
 
@@ -57,13 +67,21 @@ export default
     # crea la cartella per i topic
     Dir.mkdir("pacchetti/#{topic}") unless File.exists?("pacchetti/#{topic}")
     # crea la cartella per l'app
-    Dir.mkdir("pacchetti/#{topic}/#{name}") unless File.exists?("pacchetti/#{topic}/#{name}")
+    Dir.mkdir("pacchetti/#{topic}/#{layout}") unless File.exists?("pacchetti/#{topic}/#{layout}")
     # crea la cartella per il layout
-    Dir.mkdir("pacchetti/#{topic}/#{name}/layout") unless File.exists?("pacchetti/#{topic}/#{name}/layout")
+    Dir.mkdir("pacchetti/#{topic}/#{layout}/layout") unless File.exists?("pacchetti/#{topic}/#{layout}/layout")
     # crea la cartella per gli assets
-    Dir.mkdir("pacchetti/#{topic}/#{name}/assets") unless File.exists?("pacchetti/#{topic}/#{name}/assets")
+    Dir.mkdir("pacchetti/#{topic}/#{layout}/layout/assets") unless File.exists?("pacchetti/#{topic}/#{layout}/layout/assets")
+    # crea la cartella per data
+    Dir.mkdir("pacchetti/#{topic}/#{layout}/data") unless File.exists?("pacchetti/#{topic}/#{layout}/data")
 
-    Dir.chdir("pacchetti/#{topic}/#{name}") do
+    Dir.chdir("pacchetti/#{topic}") do
+        #puts "creazione chiave git"
+           #`eval $(ssh-agent -s) && ssh-add /var/www/vhosts/regia/marcegaglia/desk/bundle/pacchetti/.ssh/marcegaglia`
+        #puts ""
+
+        puts topic
+
         status = `git status 2>&1`
         if status.include? "ot a git repository"
             puts "Creando repo di git"
@@ -77,9 +95,16 @@ export default
             exit
         end
     end
+    
+    # qui si rompe per qualche motivo
 
-    FileUtils.cp_r("layouts/#{layout}/.", "pacchetti/#{topic}/#{name}/layout")
-    File.write("pacchetti/#{topic}/#{name}/data.js", dataString);
+    puts "exit 3 #{layout} #{topic}"
+
+    FileUtils.cp_r("layouts/#{layout}/.", "pacchetti/#{topic}/#{layout}/layout");
+
+    puts "exit 4 #{layout} #{topic}"
+        
+    File.write("pacchetti/#{topic}/#{layout}/data/data.js", dataString);
     filesRegex = /\"([^\"]+\.[^\"]+)\"/
     files = jsonData.scan(filesRegex).map { |m| m[0] }
     puts "Asset da caricare"
@@ -88,36 +113,61 @@ export default
         # puts path;
         if File.file?(path)
             puts "\u2713 #{path}"
-            FileUtils.ln_sf(File.realpath(path), "pacchetti/#{topic}/#{name}/assets")
+            FileUtils.ln_sf(File.realpath(path), "pacchetti/#{topic}/#{layout}/layout/assets")
         else
             puts "\u2717 #{path}"
         end
     }
     puts ""
 
-    filesInFolder = Dir["#{$dir}/pacchetti/#{topic}/#{name}/assets/*"].map { |p| File.basename(p) }
+    filesInFolder = Dir["#{$dir}/pacchetti/#{topic}/#{layout}/layout/assets/*"].map { |p| File.basename(p) }
     filesInFolder.each { |f| 
-        path = "#{$dir}/pacchetti/#{topic}/#{name}/assets/#{f}"
+        path = "#{$dir}/pacchetti/#{topic}/#{layout}/layout/assets/#{f}"
         if !files.include?(f) 
             # puts "Removing #{path}"
             FileUtils.rm(path)
         end
     }
-    
-    Dir.chdir("pacchetti/#{topic}/#{name}") do
+
+    # MOVE CONFIG FILES IF ROKU
+    if type == "player"
+        FileUtils.cp_r("roku-util/.", "pacchetti/#{topic}");
+    end
+    # WRITE CACHE MANIFEST
+    puts "sto scrivendo il manifest";
+
+    Dir.chdir("pacchetti/#{topic}") do
+        files =  Dir.glob("**/*").select{ |e| File.file? e };
+        manifest = File.new("manifest.mf", "w");
+        manifest.puts("CACHE:")
+        files.each { |f|
+            # tolgo gli spazi
+            manifest.puts(f.gsub(/\s/,'%20'));
+        }
+        manifest.close
+
         status = `git status 2>&1`
+
+        puts "push"
+        puts "creazione chiave git"
+            `eval $(ssh-agent -s) && ssh-add /var/www/vhosts/regia/marcegaglia/desk/bundle/pacchetti/.ssh/marcegaglia`
+        puts ""
+        `git push`
+
         if status.include? "working tree clean"
             puts "Niente di nuovo da pubblicare"
             exit
         end
-
+        
+        puts "sono qui"
         `git add -A .`
         `git commit -m "#{Time.now}"`
+        `git push`
     end
+    # END CACHE MANIFEST
     
     puts "Versioni:"
     puts log(topic)
-
 end
 
 if ARGV.length == 0
@@ -194,16 +244,15 @@ elsif ARGV[0] == 'versioni'
     end
 
     puts log(topic)
-
 elsif ARGV[0] == 'topics'
     topics.each { |t| puts t }
 
 elsif ARGV[0] == 'connettori'
     appsAPI.each { |c| 
         if isConnettore(c)
-            puts c 
+            puts c
         else 
-            puts "il connettore per " + c + " non esiste ancora"
+            puts "il connettore" + c + "non esiste ancora"
         end
     }
 end
